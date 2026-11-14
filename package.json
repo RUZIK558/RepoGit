@@ -1,7 +1,7 @@
 {
   "name": "repogit",
   "productName": "RepoGit",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "GitHub Releases desktop library",
   "main": "main.js",
   "author": "RepoGit",
@@ -9,7 +9,8 @@
   "scripts": {
     "start": "electron .",
     "build:win": "electron-builder --win portable nsis --x64",
-    "build:linux": "electron-builder --linux rpm --x64"
+    "build:linux": "electron-builder --linux rpm --x64",
+    "build:mac": "electron-builder --mac zip --x64 --arm64"
   },
   "devDependencies": {
     "electron": "35.7.5",
@@ -32,7 +33,8 @@
       "hero.webp",
       "features.js",
       "ui-features.js",
-      "assets/icon.png"
+      "assets/icon.png",
+      "platform-features.js"
     ],
     "linux": {
       "target": [
@@ -71,7 +73,16 @@
       "artifactName": "${productName}-Portable-${version}-${arch}.${ext}"
     },
     "compression": "normal",
-    "afterPack": "scripts/after-pack.cjs"
+    "afterPack": "scripts/after-pack.cjs",
+    "mac": {
+      "target": [
+        "zip"
+      ],
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.utilities",
+      "identity": null,
+      "artifactName": "${productName}-${version}-${arch}-mac.${ext}"
+    }
   },
   "homepage": "https://github.com/RUZIK558/RepoGit"
 }

@@ -8,7 +8,7 @@ permissions:
 jobs:
   windows:
     # Эти версии публикуются вручную; будущие теги собираются автоматически.
-    if: github.ref_name != 'v0.5.0' && github.ref_name != 'v0.6.0'
+    if: github.ref_name != 'v0.5.0' && github.ref_name != 'v0.6.0' && github.ref_name != 'v0.7.0'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,7 +29,7 @@ jobs:
             dist/RepoGit-Setup-*-x64.exe
           if-no-files-found: error
   linux:
-    if: github.ref_name != 'v0.5.0' && github.ref_name != 'v0.6.0'
+    if: github.ref_name != 'v0.5.0' && github.ref_name != 'v0.6.0' && github.ref_name != 'v0.7.0'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -47,8 +47,26 @@ jobs:
           name: linux
           path: dist/repogit-*.x86_64.rpm
           if-no-files-found: error
+  mac:
+    if: github.ref_name != 'v0.5.0' && github.ref_name != 'v0.6.0' && github.ref_name != 'v0.7.0'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Check version matches tag
+        run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
+      - run: npm run build:mac
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac
+          path: dist/*-mac.zip
+          if-no-files-found: error
   release:
-    needs: [windows, linux]
+    needs: [windows, linux, mac]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -60,4 +78,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: gh release create "$GITHUB_REF_NAME" packages/windows/* packages/linux/* --verify-tag --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" packages/windows/* packages/linux/* packages/mac/* --verify-tag --generate-notes
