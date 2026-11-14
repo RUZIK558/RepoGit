@@ -7,6 +7,8 @@ permissions:
   contents: read
 jobs:
   windows:
+    # v0.5.0 публикуется вручную; будущие теги собираются автоматически.
+    if: github.ref_name != 'v0.5.0'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,9 +24,12 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: windows
-          path: dist/RepoGit-Portable-*-x64.exe
+          path: |
+            dist/RepoGit-Portable-*-x64.exe
+            dist/RepoGit-Setup-*-x64.exe
           if-no-files-found: error
   linux:
+    if: github.ref_name != 'v0.5.0'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
