@@ -1,7 +1,7 @@
 {
   "name": "repogit",
   "productName": "RepoGit",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "GitHub Releases desktop library",
   "main": "main.js",
   "author": "RepoGit",
@@ -26,6 +26,7 @@
     },
     "files": [
       "main.js",
+      "github-api.js",
       "preload.js",
       "index.html",
       "style.css",

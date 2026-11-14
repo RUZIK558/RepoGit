@@ -2,13 +2,25 @@
 const {app,ipcMain,BrowserWindow,dialog}=require('electron');
 const fs=require('node:fs'),fsp=fs.promises,path=require('node:path'),crypto=require('node:crypto');
 const {spawn}=require('node:child_process');
-module.exports=function({validRepo,classify,loadLib}){
- const baseHeaders={'Accept':'application/vnd.github+json','User-Agent':'RepoGit/0.7','X-GitHub-Api-Version':'2022-11-28'};
- async function github(url){const r=await fetch(url,{headers:baseHeaders,signal:AbortSignal.timeout(25000)});if(r.status===404)return null;if(r.status===403||r.status===429)throw Error('Лимит запросов GitHub исчерпан. Повторите позже или выберите «Все проекты».');if(!r.ok)throw Error('GitHub: ошибка '+r.status);return r.json()}
+module.exports=function({api,validRepo,classify,loadLib,graphql,getToken}){
+ async function github(url){return api(url,{allowNotFound:true})}
  ipcMain.handle('readme',async(_e,repo)=>{if(!validRepo(repo))throw Error('Некорректный репозиторий.');let data=await github('https://api.github.com/repos/'+repo+'/readme');if(!data)return 'README не найден.';if(data.encoding!=='base64'||typeof data.content!=='string')return 'README слишком большой или недоступен через API GitHub. Откройте репозиторий на GitHub.';let bytes=Buffer.from(data.content.replace(/\s/g,''),'base64');if(bytes.length>300000)bytes=bytes.subarray(0,300000);const text=bytes.toString('utf8');return text+(Number(data.size)>bytes.length?'\n\n[Описание сокращено.]':'')});
+ // Cache asset names per repository, so switching OS does not repeat requests.
  const cache=new Map();
- async function suitable(repo,os){const key=repo.toLowerCase()+'|'+os,old=cache.get(key);if(old&&Date.now()-old.time<600000)return old.result;let release=await github('https://api.github.com/repos/'+repo+'/releases/latest');let result=!!release?.assets?.some(a=>{let arch=classify(a.name,os);return os==='mac'?['x64','arm64','universal'].includes(arch):arch==='x64'});cache.set(key,{time:Date.now(),result});return result}
- ipcMain.handle('filter-results',async(_e,items,os)=>{if(!Array.isArray(items)||items.length>18||!['windows','linux','mac'].includes(os)||items.some(x=>!x||!validRepo(x.repo)))throw Error('Некорректный фильтр.');let results=new Array(items.length),at=0;await Promise.all(Array.from({length:Math.min(4,items.length)},async()=>{while(at<items.length){let i=at++;results[i]=await suitable(items[i].repo,os)}}));return items.filter((_,i)=>results[i])});
+ function getCached(repo){const x=cache.get(repo.toLowerCase());return x&&Date.now()-x.time<600000?x.names:null}
+ function put(repo,names){cache.set(repo.toLowerCase(),{time:Date.now(),names})}
+ async function fetchRest(repo){let release=await github('https://api.github.com/repos/'+repo+'/releases/latest');let names=(release?.assets||[]).map(a=>a.name);put(repo,names)}
+ async function fetchGraphql(items){
+  const query='{ '+items.map((item,i)=>{const [owner,name]=item.repo.split('/');return `r${i}: repository(owner:${JSON.stringify(owner)},name:${JSON.stringify(name)}) { latestRelease { releaseAssets(first:100) { nodes { name } } } }`}).join(' ')+' }';
+  const data=await graphql(query);if(!data)throw Error('GitHub не вернул данные релизов.');
+  items.forEach((item,i)=>put(item.repo,(data['r'+i]?.latestRelease?.releaseAssets?.nodes||[]).map(a=>a.name)));
+ }
+ ipcMain.handle('filter-results',async(_e,items,os)=>{
+  if(!Array.isArray(items)||items.length>18||!['windows','linux','mac'].includes(os)||items.some(x=>!x||!validRepo(x.repo)))throw Error('Некорректный фильтр.');
+  const missing=items.filter(x=>getCached(x.repo)===null);
+  if(missing.length){if(graphql&&getToken&&await getToken())await fetchGraphql(missing);else{let at=0;await Promise.all(Array.from({length:Math.min(4,missing.length)},async()=>{while(at<missing.length){let i=at++;await fetchRest(missing[i].repo)}}))}}
+  return items.filter(item=>(getCached(item.repo)||[]).some(name=>{let arch=classify(name,os);return os==='mac'?['x64','arm64','universal'].includes(arch):arch==='x64'}));
+ });
  function steamRoots(){let h=app.getPath('home');return [path.join(h,'.local/share/Steam'),path.join(h,'.steam/steam'),path.join(h,'.var/app/com.valvesoftware.Steam/.local/share/Steam')].filter(x=>fs.existsSync(x))}
  const protonFile=()=>path.join(app.getPath('userData'),'proton-9.json');
  async function validProton(file){try{let real=await fsp.realpath(file);return path.basename(real)==='proton'&&path.basename(path.dirname(real)).toLowerCase()==='proton 9.0-4'&&(await fsp.stat(real)).isFile()}catch{return false}}
