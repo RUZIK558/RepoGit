@@ -1,0 +1,67 @@
+{
+  "name": "repogit",
+  "productName": "RepoGit",
+  "version": "0.4.0",
+  "description": "GitHub Releases desktop library",
+  "main": "main.js",
+  "author": "RepoGit",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win portable --x64",
+    "build:linux": "electron-builder --linux rpm --x64"
+  },
+  "devDependencies": {
+    "electron": "35.7.5",
+    "electron-builder": "26.0.12"
+  },
+  "build": {
+    "appId": "app.repogit.desktop",
+    "productName": "RepoGit",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "style.css",
+      "renderer.js",
+      "hero.webp",
+      "features.js",
+      "ui-features.js"
+    ],
+    "linux": {
+      "target": [
+        "rpm"
+      ],
+      "category": "Utility",
+      "maintainer": "RepoGit"
+    },
+    "win": {
+      "target": [
+        "portable"
+      ],
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "rpm": {
+      "depends": [
+        "gtk3",
+        "nss",
+        "alsa-lib",
+        "libXScrnSaver",
+        "libXtst",
+        "libnotify"
+      ]
+    },
+    "portable": {
+      "artifactName": "${productName}-Portable-${version}-${arch}.${ext}"
+    },
+    "compression": "normal"
+  },
+  "homepage": "https://github.com/RUZIK558/RepoGit"
+}
