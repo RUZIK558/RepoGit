@@ -1,7 +1,7 @@
 {
   "name": "repogit",
   "productName": "RepoGit",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "GitHub Releases desktop library",
   "main": "main.js",
   "author": "RepoGit",
@@ -13,7 +13,9 @@
   },
   "devDependencies": {
     "electron": "35.7.5",
-    "electron-builder": "26.0.12"
+    "electron-builder": "26.0.12",
+    "resedit": "1.7.2",
+    "pe-library": "0.4.1"
   },
   "build": {
     "appId": "app.repogit.desktop",
@@ -29,26 +31,31 @@
       "renderer.js",
       "hero.webp",
       "features.js",
-      "ui-features.js"
+      "ui-features.js",
+      "assets/icon.png"
     ],
     "linux": {
       "target": [
         "rpm"
       ],
       "category": "Utility",
-      "maintainer": "RepoGit"
+      "maintainer": "RepoGit",
+      "icon": "assets/icon.png"
     },
     "win": {
       "target": [
         "portable",
         "nsis"
       ],
-      "signAndEditExecutable": false
+      "signAndEditExecutable": false,
+      "icon": "assets/icon.ico"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "artifactName": "${productName}-Setup-${version}-${arch}.${ext}"
+      "artifactName": "${productName}-Setup-${version}-${arch}.${ext}",
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico"
     },
     "rpm": {
       "depends": [
@@ -63,7 +70,8 @@
     "portable": {
       "artifactName": "${productName}-Portable-${version}-${arch}.${ext}"
     },
-    "compression": "normal"
+    "compression": "normal",
+    "afterPack": "scripts/after-pack.cjs"
   },
   "homepage": "https://github.com/RUZIK558/RepoGit"
 }
