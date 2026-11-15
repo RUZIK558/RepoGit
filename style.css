@@ -11,3 +11,6 @@
 .update-dot{color:#78ee9a}.download-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.download-controls .progress{margin:0}.download-controls:not(:has(button:not([hidden]))):not(:has(.progress:not(:empty))){display:none}.file-actions{display:flex;gap:8px;flex-wrap:wrap}.tag-soft{color:#bfeac9}.card h3{line-height:1.4}
 
 .readme-panel{white-space:pre-wrap;overflow-wrap:anywhere;max-height:540px;overflow:auto;padding:22px;background:#19251d;border:1px solid #35483b;color:#d4e6d8;font:13px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace}.catalog-head{gap:12px;flex-wrap:wrap}.catalog-head .toolbar{margin-left:auto}
+
+.github-star-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 20px;background:#19271e;border:1px solid #3d5142;border-top:0}.github-star-row strong{font-size:13px;color:#e1eee5}.github-star-row p{font-size:12px;color:#aebfb2;line-height:1.5;margin:5px 0 0}.github-star-row button{flex-shrink:0}.action-bar{flex-wrap:wrap}
+@media(max-width:1100px){.github-star-row{flex-wrap:wrap}}

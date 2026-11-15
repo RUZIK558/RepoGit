@@ -16,6 +16,24 @@ async function readFavorites(){try{let x=JSON.parse(await fsp.readFile(favFile()
 ipcMain.handle('favorites',async()=>readFavorites());
 ipcMain.handle('set-favorite',async(_e,r)=>{if(!r||!validRepo(r.repo))throw Error('Некорректный репозиторий.');let list=await readFavorites();if(!list.some(x=>x.repo.toLowerCase()===r.repo.toLowerCase())){if(list.length>=500)throw Error('Достигнут лимит избранных проектов.');list.unshift({repo:r.repo,description:String(r.description||'').slice(0,500),stars:Number.isFinite(r.stars)?r.stars:0,url:'https://github.com/'+r.repo});await fsp.mkdir(dataDir(),{recursive:true});await fsp.writeFile(favFile(),JSON.stringify(list,null,2),{mode:0o600})}return list});
 ipcMain.handle('unfavorite',async(_e,repo)=>{if(!validRepo(repo))throw Error('Некорректный репозиторий.');let list=(await readFavorites()).filter(x=>x.repo.toLowerCase()!==repo.toLowerCase());await fsp.mkdir(dataDir(),{recursive:true});await fsp.writeFile(favFile(),JSON.stringify(list,null,2),{mode:0o600});return list});
+// GitHub stars are separate from RepoGit's local favorites. Tokens stay in the main process.
+async function starRequest(repo,method){
+ if(!validRepo(repo))throw Error('Некорректный репозиторий.');
+ if(!await account())throw Error('Сначала войдите в GitHub.');
+ const currentToken=await getToken();
+ const endpoint='https://api.github.com/user/starred/'+repo.split('/').map(encodeURIComponent).join('/');
+ let response;
+ try{response=await fetch(endpoint,{method,redirect:'error',headers:{'User-Agent':'RepoGit/0.11','Accept':'application/vnd.github+json','Authorization':'Bearer '+currentToken,'X-GitHub-Api-Version':'2022-11-28',...(method==='PUT'?{'Content-Length':'0'}:{})},signal:AbortSignal.timeout(30000)})}catch{throw Error('Не удалось связаться с GitHub. Проверьте подключение и попробуйте снова.')}
+ if(method==='GET'&&response.status===404)return false;
+ if(response.status===204)return true;
+ if(response.status===401)throw Error('GitHub не принял токен. Войдите снова.');
+ if(response.status===429||(response.status===403&&response.headers.get('x-ratelimit-remaining')==='0'))throw Error('GitHub ограничил число запросов. Попробуйте позже.');
+ if(response.status===403)throw Error('GitHub отказал в доступе. Проверьте права токена Starring: Read and write.');
+ if(response.status===404)throw Error('Репозиторий не найден или недоступен этому аккаунту.');
+ throw Error(`GitHub: ошибка ${response.status}. Попробуйте снова.`);
+}
+ipcMain.handle('github-star-status',async(_e,repo)=>{if(!validRepo(repo))throw Error('Некорректный репозиторий.');const a=await account();if(!a)return {authenticated:false};return {authenticated:true,login:a.login,starred:await starRequest(repo,'GET')}});
+ipcMain.handle('github-set-star',async(_e,repo,starred)=>{if(typeof starred!=='boolean')throw Error('Некорректное состояние звезды.');await starRequest(repo,starred?'PUT':'DELETE');return {starred}});
 ipcMain.handle('browse',async(_e,p)=>{let page=Number(p);if(!Number.isInteger(page)||page<1||page>50)throw Error('Недопустимая страница.');let x=await api(`https://api.github.com/search/repositories?q=stars%3A%3E1000%20is%3Apublic&sort=stars&order=desc&per_page=18&page=${page}`);return x.items.map(r=>({repo:r.full_name,description:r.description||'',stars:r.stargazers_count,url:r.html_url}))});
 ipcMain.handle('account',async()=>account());
 ipcMain.handle('login',async(_e,t)=>{t=typeof t==='string'?t.trim():'';if(!validToken(t))throw Error('Введите личный токен GitHub (personal access token), а не имя пользователя или пароль. Токен содержит только латинские буквы, цифры и символы без пробелов.');token=t;user=null;tokenPersisted=false;try{const u=await authenticated('/user');user=u;if(canPersist()){try{await fsp.mkdir(dataDir(),{recursive:true});await fsp.writeFile(authFile(),safeStorage.encryptString(token),{mode:0o600});tokenPersisted=true}catch{}}return {login:u.login,persisted:tokenPersisted}}catch(e){token=null;user=null;throw e}});
